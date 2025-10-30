@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Movie App</string>
+    <string name="app_name">AgnesDigital</string>
     <string name="now_playing">Now Playing</string>
     <string name="popular_movies">Popular Movies</string>
     <string name="search_movies">Search Movies</string>
