@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background color -->
+    <item android:drawable="@color/purple_700"/>
+    
+    <!-- Center icon - using shape instead of bitmap -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@android:color/white"/>
+            <size 
+                android:width="120dp"
+                android:height="120dp"/>
+        </shape>
+    </item>
+</layer-list>
