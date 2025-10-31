@@ -10,12 +10,15 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
+
 import com.example.myapplication.adapters.MovieAdapter;
 import com.example.myapplication.api.RetrofitClient;
 import com.example.myapplication.api.TMDBApi;
 import com.example.myapplication.data.DummyData;
 import com.example.myapplication.models.Movie;
 import com.example.myapplication.models.MovieResponse;
+import com.example.myapplication.CarouselAdapter;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
@@ -27,7 +30,10 @@ public class MainActivity extends AppCompatActivity {
     private MovieAdapter movieAdapter;
     private ProgressBar progressBar;
     private TMDBApi api;
-    
+
+    private ViewPager2 carouselViewPager;
+    private CarouselAdapter carouselAdapter;
+
     // Toggle untuk mode dummy data
     private static final boolean USE_DUMMY_DATA = true; // Ganti ke false jika sudah punya API key
 
@@ -54,8 +60,17 @@ public class MainActivity extends AppCompatActivity {
         // Initialize Retrofit API
         api = RetrofitClient.getApi();
 
-        // Load popular movies
         loadPopularMovies();
+
+        carouselViewPager = findViewById(R.id.carouselViewPager);
+
+        carouselAdapter = new CarouselAdapter(new ArrayList<>(), this);
+        carouselViewPager.setAdapter(carouselAdapter);
+
+        setupCarouselVisuals();
+
+        // Load popular movies
+
     }
 
     private void loadPopularMovies() {
@@ -77,6 +92,10 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 progressBar.setVisibility(View.GONE);
                 List<Movie> dummyMovies = DummyData.getDummyMovies();
+
+                List<Movie> carouselMovies = new ArrayList<>(dummyMovies.subList(0,Math.min(dummyMovies.size(), 5)));
+                carouselAdapter.setMovies(carouselMovies);
+
                 movieAdapter.setMovies(dummyMovies);
                 Toast.makeText(MainActivity.this, 
                     "Loaded " + dummyMovies.size() + " dummy movies", Toast.LENGTH_SHORT).show();
@@ -136,5 +155,17 @@ public class MainActivity extends AppCompatActivity {
         if (recyclerView != null) {
             recyclerView.setAdapter(null);
         }
+    }
+
+    private void setupCarouselVisuals() {carouselViewPager.setClipToPadding(false);
+        carouselViewPager.setClipChildren(false);
+        carouselViewPager.setOffscreenPageLimit(3);
+        carouselViewPager.getChildAt(0).setOverScrollMode(RecyclerView.OVER_SCROLL_NEVER);
+
+        // Efek zoom-out untuk halaman di samping
+        carouselViewPager.setPageTransformer((page, position) -> {
+            float r = 1 - Math.abs(position);
+            page.setScaleY(0.85f + r * 0.15f);
+        });
     }
 }
