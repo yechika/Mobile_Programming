@@ -18,6 +18,7 @@ import com.example.myapplication.data.DummyData;
 import com.example.myapplication.models.Movie;
 import com.example.myapplication.models.MovieResponse;
 import com.example.myapplication.firebase.FirebaseManager;
+import com.example.myapplication.firebase.AuthManager;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
@@ -191,9 +192,31 @@ public class MainActivity extends AppCompatActivity {
         } else if (id == R.id.action_favorites) {
             startActivity(new Intent(this, FavoritesActivity.class));
             return true;
+        } else if (id == R.id.action_logout) {
+            handleLogout();
+            return true;
         }
         
         return super.onOptionsItemSelected(item);
+    }
+    
+    private void handleLogout() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Yes", (dialog, which) -> {
+                AuthManager.getInstance().signOut(this, new AuthManager.SignOutCallback() {
+                    @Override
+                    public void onSignOutSuccess() {
+                        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    }
+                });
+            })
+            .setNegativeButton("No", null)
+            .show();
     }
     
     @Override

@@ -16,6 +16,10 @@ public class FavoriteMovie {
     private int voteCount;
     private long addedAt;
 
+    // No-argument constructor required for Firebase
+    public FavoriteMovie() {
+    }
+
     public FavoriteMovie(int id, String title, String overview, String posterPath, 
                         String backdropPath, String releaseDate, double voteAverage, 
                         int voteCount, long addedAt) {

@@ -1,6 +1,5 @@
 package com.example.myapplication;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
@@ -11,8 +10,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
-import com.example.myapplication.database.AppDatabase;
 import com.example.myapplication.database.FavoriteMovie;
+import com.example.myapplication.firebase.FavoriteManager;
+import com.example.myapplication.firebase.AuthManager;
 
 public class MovieDetailActivity extends AppCompatActivity {
     private ImageView backdropImageView;
@@ -35,7 +35,7 @@ public class MovieDetailActivity extends AppCompatActivity {
     private int voteCount;
     private boolean isFavorite = false;
 
-    private AppDatabase database;
+    private FavoriteManager favoriteManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,8 +53,15 @@ public class MovieDetailActivity extends AppCompatActivity {
         scrollView = findViewById(R.id.scrollView);
         progressBar = findViewById(R.id.progressBar);
 
-        // Initialize database
-        database = AppDatabase.getInstance(this);
+        // Initialize Firebase FavoriteManager
+        favoriteManager = FavoriteManager.getInstance();
+        String userId = AuthManager.getInstance().getCurrentUserId();
+        if (userId != null) {
+            favoriteManager.setCurrentUserId(userId);
+        } else {
+            Toast.makeText(this, "Please login to use favorites", Toast.LENGTH_SHORT).show();
+            favoriteButton.setEnabled(false);
+        }
 
         // Get data from intent
         movieId = getIntent().getIntExtra("movie_id", 0);
@@ -106,47 +113,59 @@ public class MovieDetailActivity extends AppCompatActivity {
     }
 
     private void checkFavoriteStatus() {
-        new AsyncTask<Void, Void, Boolean>() {
-            @Override
-            protected Boolean doInBackground(Void... voids) {
-                return database.favoriteMovieDao().isFavorite(movieId);
-            }
-
-            @Override
-            protected void onPostExecute(Boolean favorite) {
-                isFavorite = favorite;
-                updateFavoriteButton();
-            }
-        }.execute();
+        favoriteManager.isFavorite(movieId, isFav -> {
+            isFavorite = isFav;
+            updateFavoriteButton();
+        });
     }
 
     private void toggleFavorite() {
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... voids) {
-                if (isFavorite) {
-                    // Remove from favorites
-                    database.favoriteMovieDao().deleteById(movieId);
-                } else {
-                    // Add to favorites
-                    FavoriteMovie favoriteMovie = new FavoriteMovie(
-                            movieId, title, overview, posterPath, backdropPath,
-                            releaseDate, rating, voteCount, System.currentTimeMillis()
-                    );
-                    database.favoriteMovieDao().insert(favoriteMovie);
+        favoriteButton.setEnabled(false); // Disable sementara untuk prevent double-click
+        
+        if (isFavorite) {
+            // Remove from favorites
+            favoriteManager.removeFromFavorites(movieId, new FavoriteManager.OnCompleteListener() {
+                @Override
+                public void onSuccess() {
+                    isFavorite = false;
+                    updateFavoriteButton();
+                    Toast.makeText(MovieDetailActivity.this, 
+                        "Removed from favorites", Toast.LENGTH_SHORT).show();
+                    favoriteButton.setEnabled(true);
                 }
-                return null;
-            }
 
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                isFavorite = !isFavorite;
-                updateFavoriteButton();
-                String message = isFavorite ? 
-                    "Added to favorites" : "Removed from favorites";
-                Toast.makeText(MovieDetailActivity.this, message, Toast.LENGTH_SHORT).show();
-            }
-        }.execute();
+                @Override
+                public void onFailure(String error) {
+                    Toast.makeText(MovieDetailActivity.this, 
+                        "Failed to remove: " + error, Toast.LENGTH_SHORT).show();
+                    favoriteButton.setEnabled(true);
+                }
+            });
+        } else {
+            // Add to favorites
+            FavoriteMovie favoriteMovie = new FavoriteMovie(
+                    movieId, title, overview, posterPath, backdropPath,
+                    releaseDate, rating, voteCount, System.currentTimeMillis()
+            );
+            
+            favoriteManager.addToFavorites(favoriteMovie, new FavoriteManager.OnCompleteListener() {
+                @Override
+                public void onSuccess() {
+                    isFavorite = true;
+                    updateFavoriteButton();
+                    Toast.makeText(MovieDetailActivity.this, 
+                        "Added to favorites", Toast.LENGTH_SHORT).show();
+                    favoriteButton.setEnabled(true);
+                }
+
+                @Override
+                public void onFailure(String error) {
+                    Toast.makeText(MovieDetailActivity.this, 
+                        "Failed to add: " + error, Toast.LENGTH_SHORT).show();
+                    favoriteButton.setEnabled(true);
+                }
+            });
+        }
     }
 
     private void updateFavoriteButton() {

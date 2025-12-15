@@ -1,17 +1,17 @@
 package com.example.myapplication;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.adapters.FavoriteMovieAdapter;
-import com.example.myapplication.database.AppDatabase;
 import com.example.myapplication.database.FavoriteMovie;
-import java.util.ArrayList;
+import com.example.myapplication.firebase.FavoriteManager;
+import com.example.myapplication.firebase.AuthManager;
 import java.util.List;
 
 public class FavoritesActivity extends AppCompatActivity {
@@ -19,7 +19,7 @@ public class FavoritesActivity extends AppCompatActivity {
     private FavoriteMovieAdapter movieAdapter;
     private ProgressBar progressBar;
     private TextView emptyTextView;
-    private AppDatabase database;
+    private FavoriteManager favoriteManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,43 +39,50 @@ public class FavoritesActivity extends AppCompatActivity {
         movieAdapter = new FavoriteMovieAdapter(this);
         recyclerView.setAdapter(movieAdapter);
 
-        // Initialize database
-        database = AppDatabase.getInstance(this);
-
-        // Load favorite movies
-        loadFavoriteMovies();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Reload favorites when returning to this activity
-        loadFavoriteMovies();
+        // Initialize Firebase FavoriteManager
+        favoriteManager = FavoriteManager.getInstance();
+        String userId = AuthManager.getInstance().getCurrentUserId();
+        if (userId != null) {
+            favoriteManager.setCurrentUserId(userId);
+            // Load favorite movies with real-time updates
+            loadFavoriteMovies();
+        } else {
+            Toast.makeText(this, "Please login to view favorites", Toast.LENGTH_SHORT).show();
+            progressBar.setVisibility(View.GONE);
+            emptyTextView.setVisibility(View.VISIBLE);
+            emptyTextView.setText("Please login to view favorites");
+        }
     }
 
     private void loadFavoriteMovies() {
         progressBar.setVisibility(View.VISIBLE);
-
-        new AsyncTask<Void, Void, List<FavoriteMovie>>() {
+        
+        // Gunakan real-time listener untuk auto-update saat ada perubahan
+        favoriteManager.addFavoritesListener(new FavoriteManager.OnLoadListener() {
             @Override
-            protected List<FavoriteMovie> doInBackground(Void... voids) {
-                return database.favoriteMovieDao().getAllFavorites();
-            }
-
-            @Override
-            protected void onPostExecute(List<FavoriteMovie> favoriteMovies) {
+            public void onLoaded(List<FavoriteMovie> favorites) {
                 progressBar.setVisibility(View.GONE);
                 
-                if (favoriteMovies != null && !favoriteMovies.isEmpty()) {
+                if (favorites != null && !favorites.isEmpty()) {
                     emptyTextView.setVisibility(View.GONE);
                     recyclerView.setVisibility(View.VISIBLE);
-                    movieAdapter.setMovies(favoriteMovies);
+                    movieAdapter.setMovies(favorites);
                 } else {
                     emptyTextView.setVisibility(View.VISIBLE);
                     recyclerView.setVisibility(View.GONE);
+                    emptyTextView.setText("No favorite movies yet");
                 }
             }
-        }.execute();
+
+            @Override
+            public void onError(String error) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(FavoritesActivity.this, 
+                    "Error loading favorites: " + error, Toast.LENGTH_SHORT).show();
+                emptyTextView.setVisibility(View.VISIBLE);
+                emptyTextView.setText("Error loading favorites");
+            }
+        });
     }
     
     @Override
