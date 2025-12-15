@@ -1,6 +1,6 @@
 # Movie App - Android Application
 
-Aplikasi Android untuk mencari dan menyimpan film favorit menggunakan The Movie Database (TMDB) API.
+Aplikasi Android untuk mencari dan menyimpan film favorit menggunakan Firebase Realtime Database.
 
 ## Fitur Aplikasi
 
@@ -12,9 +12,11 @@ Aplikasi Android untuk mencari dan menyimpan film favorit menggunakan The Movie 
 
 ### 2. **MainActivity** (Aktivitas 2)
 - Halaman utama yang menampilkan daftar film populer
+- Data real-time dari Firebase Realtime Database
+- Auto-initialize database dengan dummy data jika kosong
 - Menggunakan RecyclerView untuk menampilkan daftar film
 - Setiap film ditampilkan dalam CardView
-- **Teknologi**: RecyclerView, CardView, Retrofit
+- **Teknologi**: RecyclerView, CardView, Firebase Realtime Database
 
 ### 3. **MovieDetailActivity** (Aktivitas 3)
 - Tampil saat pengguna mengklik film di MainActivity
@@ -24,9 +26,10 @@ Aplikasi Android untuk mencari dan menyimpan film favorit menggunakan The Movie 
 
 ### 4. **SearchActivity** (Aktivitas 4)
 - Halaman untuk mencari film
-- SearchView di bagian atas
+- SearchView di bagian atas dengan debouncing
+- Pencarian real-time dari Firebase
 - Hasil pencarian ditampilkan dalam RecyclerView
-- **Teknologi**: SearchView, RecyclerView, Retrofit
+- **Teknologi**: SearchView, RecyclerView, Firebase Realtime Database
 
 ### 5. **FavoritesActivity** (Aktivitas 5)
 - Menampilkan daftar film favorit
@@ -35,29 +38,57 @@ Aplikasi Android untuk mencari dan menyimpan film favorit menggunakan The Movie 
 
 ## Langkah Setup
 
-### 1. Dapatkan API Key dari TMDB
-1. Kunjungi https://www.themoviedb.org/
-2. Buat akun gratis
-3. Pergi ke Settings → API
-4. Salin API Key (v3 auth)
+### 1. Setup Firebase Realtime Database
 
-### 2. Update API Key di Aplikasi
-Buka file: `app/src/main/java/com/example/myapplication/api/TMDBApi.java`
+#### A. Buat Proyek Firebase
+1. Kunjungi [Firebase Console](https://console.firebase.google.com/)
+2. Klik **"Add project"** atau **"Tambahkan proyek"**
+3. Beri nama proyek (misalnya: "Movie App")
+4. Ikuti wizard setup hingga selesai
 
-Ganti baris berikut dengan API Key Anda:
-```java
-String API_KEY = "YOUR_TMDB_API_KEY_HERE"; // Ganti dengan API key Anda
-```
+#### B. Tambahkan Android App
+1. Di Firebase Console, klik ikon Android (</>) untuk menambahkan app
+2. Isi **Package name**: `com.example.myapplication`
+3. Isi **App nickname**: "Movie App" (opsional)
+4. Download file `google-services.json`
+5. **PENTING**: Ganti file `app/google-services.json` dengan file yang baru Anda download
 
-### 3. Sync Project
+#### C. Enable Realtime Database
+1. Di Firebase Console, buka **Build** → **Realtime Database**
+2. Klik **"Create Database"**
+3. Pilih lokasi database (misalnya: asia-southeast1)
+4. Pilih mode **"Start in test mode"** untuk development
+   ```json
+   {
+     "rules": {
+       ".read": true,
+       ".write": true
+     }
+   }
+   ```
+   ⚠️ **Catatan**: Untuk production, ubah rules menjadi lebih ketat!
+
+### 2. Sync Project
 1. Buka Android Studio
 2. Klik "Sync Project with Gradle Files"
 3. Tunggu hingga semua dependencies terdownload
 
-### 4. Build dan Run
+### 3. Build dan Run
 1. Sambungkan perangkat Android atau gunakan emulator
 2. Klik tombol "Run" di Android Studio
 3. Aplikasi akan terinstall dan berjalan
+4. **Otomatis**: Database akan ter-populate dengan data dummy pada first run
+
+### 4. (Opsional) Gunakan TMDB API
+Jika ingin menggunakan TMDB API instead of Firebase:
+
+1. Dapatkan API Key dari [TMDB](https://www.themoviedb.org/)
+2. Buka file: `app/src/main/java/com/example/myapplication/api/TMDBApi.java`
+3. Ganti: `String API_KEY = "YOUR_TMDB_API_KEY_HERE";`
+4. Di MainActivity.java dan SearchActivity.java, ubah:
+   ```java
+   private static final boolean USE_FIREBASE = false; // false = TMDB API
+   ```
 
 ## Struktur Proyek
 
@@ -88,11 +119,50 @@ app/src/main/java/com/example/myapplication/
 - **AndroidX**: AppCompat, Material Design
 - **RecyclerView**: Untuk menampilkan daftar
 - **CardView**: Untuk tampilan kartu film
-- **Retrofit**: HTTP client untuk API calls
+- **Firebase**: Realtime Database untuk data storage
+  - Firebase BOM 32.7.0
+  - Firebase Realtime Database
+  - Firebase Auth
+- **Retrofit**: HTTP client untuk API calls (opsional)
 - **Gson**: JSON converter
 - **Glide**: Image loading library (optimized)
-- **Room**: Database lokal
+- **Room**: Database lokal untuk favorites
 - **OkHttp**: Network optimization
+
+## 🔥 Firebase Features
+
+### Realtime Database
+- **Auto-initialization**: Database otomatis ter-populate dengan dummy data pada first run
+- **Offline persistence**: Data di-cache untuk akses offline
+- **Real-time sync**: Data ter-update otomatis saat ada perubahan
+- **Search functionality**: Pencarian by title dengan Firebase queries
+
+### FirebaseManager.java
+Singleton class untuk mengelola semua operasi Firebase:
+- `getPopularMovies()` - Load semua film populer
+- `searchMovies(query)` - Cari film by title
+- `getMovieById(id)` - Get detail film specific
+- `saveMovie(movie)` - Simpan/update film
+- `initializeWithDummyData()` - Populate database pertama kali
+- `isDatabaseEmpty()` - Check apakah database kosong
+
+## 📊 Database Structure (Firebase)
+
+```
+movie-app-database/
+├── popular_movies/
+│   ├── 1/
+│   │   ├── id: 1
+│   │   ├── title: "The Shawshank Redemption"
+│   │   ├── overview: "..."
+│   │   ├── posterPath: "/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg"
+│   │   ├── backdropPath: "/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg"
+│   │   ├── releaseDate: "1994-09-23"
+│   │   ├── voteAverage: 8.7
+│   │   └── voteCount: 25847
+│   ├── 2/
+│   └── ...
+```
 
 ## ⚡ Optimasi Performa
 
@@ -106,8 +176,67 @@ Aplikasi telah dioptimasi untuk performa yang lebih ringan:
 - ✅ **Glide Disk Cache**: Loading lebih cepat
 - ✅ **Memory Management**: Auto cleanup saat low memory
 - ✅ **Network Timeout**: Optimasi koneksi
+- ✅ **Firebase Offline Persistence**: Data tersedia offline
+- ✅ **Lazy Loading**: Data dimuat saat dibutuhkan
 
+## 🔒 Security (Production)
+
+Untuk production deployment, ubah Firebase rules:
+
+```json
+{
+  "rules": {
+    "popular_movies": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}
+```
+
+Ini membolehkan semua orang read, tapi hanya authenticated users yang bisa write.
+
+## 🐛 Troubleshooting
+
+### Firebase Connection Failed
+- Check internet connection
+- Pastikan Realtime Database sudah enabled di Firebase Console
+- Check Firebase rules (pastikan allow read access)
+
+### google-services.json Error
+- Pastikan file ada di folder `app/`
+- File harus valid dari Firebase Console
+- Sync gradle setelah mengganti file
+
+### Data tidak muncul
+- Check Firebase Console apakah data sudah ada
+- Check Logcat untuk error messages
+- Coba clear app data dan restart
+
+## 📱 Mode Toggle
+
+Aplikasi mendukung 3 mode data source:
+
+1. **Firebase Mode** (Default)
+   ```java
+   private static final boolean USE_FIREBASE = true;
+   ```
+
+2. **TMDB API Mode**
+   ```java
+   private static final boolean USE_FIREBASE = false;
+   ```
+
+3. **Dummy Data Mode** (Legacy)
+   - Masih tersedia di `DummyData.java`
+   - Digunakan untuk auto-initialize Firebase
+
+## 📚 Dokumentasi Tambahan
+
+- `FIREBASE_SETUP.md` - Panduan lengkap setup Firebase
+- `PRODUCTION_COMPONENTS.md` - Dokumentasi komponen production-ready
 
 ## API Credits
 
-Data film menggunakan API dari [The Movie Database (TMDB)](https://www.themoviedb.org/).
+- Firebase Realtime Database by Google
+- Data film default menggunakan struktur dari [The Movie Database (TMDB)](https://www.themoviedb.org/)

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "89467527216",
+    "firebase_url": "https://mobileprogrammingaol-e55be-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "mobileprogrammingaol-e55be",
+    "storage_bucket": "mobileprogrammingaol-e55be.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:89467527216:android:3ad194af8d3c1138c00df5",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6wxi49psENmAtXliHIQYu37dKdqkLPl0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

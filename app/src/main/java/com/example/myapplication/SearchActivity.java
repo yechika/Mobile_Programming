@@ -17,6 +17,7 @@ import com.example.myapplication.api.TMDBApi;
 import com.example.myapplication.data.DummyData;
 import com.example.myapplication.models.Movie;
 import com.example.myapplication.models.MovieResponse;
+import com.example.myapplication.firebase.FirebaseManager;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
@@ -32,8 +33,8 @@ public class SearchActivity extends AppCompatActivity {
     private TextView resultCountTextView;
     private TMDBApi api;
     
-    // Toggle untuk mode dummy data
-    private static final boolean USE_DUMMY_DATA = true; // Ganti ke false jika sudah punya API key
+    // Toggle untuk mode data source
+    private static final boolean USE_FIREBASE = true; // true = Firebase, false = TMDB API
     
     // Debounce untuk real-time search
     private Handler searchHandler;
@@ -143,11 +144,27 @@ public class SearchActivity extends AppCompatActivity {
         showLoading(true);
         showEmptyState(false, null);
         
-        if (USE_DUMMY_DATA) {
-            searchDummyData(query);
+        if (USE_FIREBASE) {
+            searchFromFirebase(query);
         } else {
             searchFromAPI(query);
         }
+    }
+    
+    private void searchFromFirebase(String query) {
+        FirebaseManager.getInstance().searchMovies(query, new FirebaseManager.FirebaseCallback<List<Movie>>() {
+            @Override
+            public void onSuccess(List<Movie> results) {
+                showLoading(false);
+                displayResults(results, query);
+            }
+            
+            @Override
+            public void onError(Exception e) {
+                showLoading(false);
+                showError("Error searching: " + e.getMessage());
+            }
+        });
     }
     
     private void searchDummyData(String query) {
